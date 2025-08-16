@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Predictor PWA</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+  h1 { color: #333; }
+  select, button { padding: 8px 12px; margin: 5px; font-size: 16px; border-radius: 6px; border: 1px solid #999; }
+  #card-buttons { display: grid; grid-template-columns: repeat(4, 70px); gap: 10px; justify-content: center; margin: 20px 0; }
+  button { background: #007bff; color: white; border: none; cursor: pointer; }
+  button:hover { background: #0056b3; }
+  #back { background: #dc3545; }
+  #back:hover { background: #a71d2a; }
+  #current-cards, #prediction, #last-prediction, #note { margin-top: 15px; font-size: 16px; color: #222; }
+  canvas { margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Baccarat Predictor PWA</h1>
+
+<label>Choose Number of Decks:</label>
+<select id="numDecks">
+  <option value="1">1 Deck</option>
+  <option value="2">2 Decks</option>
+  <option value="3">3 Decks</option>
+  <option value="4">4 Decks</option>
+  <option value="5">5 Decks</option>
+  <option value="6">6 Decks</option>
+  <option value="7">7 Decks</option>
+  <option value="8" selected>8 Decks</option>
+</select>
+
+<div id="note">Enter cards in order: Player 1 → Banker 1 → Player 2 → Banker 2 → (Player 3 → Banker 3 if drawn)</div>
+
+<div id="card-buttons">
+  <button onclick="addCard('A')">A</button>
+  <button onclick="addCard('2')">2</button>
+  <button onclick="addCard('3')">3</button>
+  <button onclick="addCard('4')">4</button>
+  <button onclick="addCard('5')">5</button>
+  <button onclick="addCard('6')">6</button>
+  <button onclick="addCard('7')">7</button>
+  <button onclick="addCard('8')">8</button>
+  <button onclick="addCard('9')">9</button>
+  <button onclick="addCard('10')">10</button>
+  <button onclick="addCard('J')">J</button>
+  <button onclick="addCard('Q')">Q</button>
+  <button onclick="addCard('K')">K</button>
+  <button id="back" onclick="removeCard()">⬅️ Back</button>
+</div>
+
+<div id="current-cards">Current Cards: (none)</div>
+
+<button onclick="runSimulation()">Run Simulation</button>
+
+<div id="prediction">Prediction: (none)</div>
+<div id="last-prediction">Last Prediction: (none)</div>
+
+<canvas id="resultChart" width="300" height="300"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let currentCards = [];
+let lastPrediction = "(none)";
+
+function addCard(card) {
+  currentCards.push(card);
+  updateDisplay();
+}
+
+function removeCard() {
+  currentCards.pop();
+  updateDisplay();
+}
+
+function updateDisplay() {
+  document.getElementById("current-cards").innerText =
+    "Current Cards: " + (currentCards.length ? currentCards.join(", ") : "(none)");
+}
+
+function buildDeck(numDecks) {
+  const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  let deck = [];
+  for(let d=0; d<numDecks; d++){
+    for(let r of ranks){
+      for(let s=0; s<4; s++){
+        deck.push(r);
+      }
+    }
+  }
+  return deck;
+}
+
+function removeSeen(deck, seen) {
+  for(let c of seen){
+    const idx = deck.indexOf(c);
+    if(idx !== -1) deck.splice(idx,1);
+  }
+  return deck;
+}
+
+function baccaratValue(hand) {
+  let sum = 0;
+  for(let card of hand){
+    if(card==="A") sum +=1;
+    else if(["J","Q","K"].includes(card)) sum +=0;
+    else sum += parseInt(card);
+  }
+  return sum%10;
+}
+
+function runSimulation() {
+  const numDecks = parseInt(document.getElementById("numDecks").value);
+  let deck = buildDeck(numDecks);
+  deck = removeSeen(deck, currentCards);
+
+  let playerWins=0, bankerWins=0, ties=0;
+  const trials=20000;
+
+  for(let i=0;i<trials;i++){
+    let tempDeck = [...deck];
+    let playerHand = [tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0],
+                      tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0]];
+    let bankerHand = [tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0],
+                      tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0]];
+
+    let playerTotal = baccaratValue(playerHand);
+    let bankerTotal = baccaratValue(bankerHand);
+
+    if(playerTotal<=5){
+      playerHand.push(tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0]);
+      playerTotal = baccaratValue(playerHand);
+    }
+
+    if(bankerTotal<=5){
+      bankerHand.push(tempDeck.splice(Math.floor(Math.random()*tempDeck.length),1)[0]);
+      bankerTotal = baccaratValue(bankerHand);
+    }
+
+    if(playerTotal>bankerTotal) playerWins++;
+    else if(playerTotal<bankerTotal) bankerWins++;
+    else ties++;
+  }
+
+  const tieP = ((ties/trials)*100).toFixed(1);
+  const playerP = ((playerWins/trials)*100).toFixed(1);
+  const bankerP = ((bankerWins/trials)*100).toFixed(1);
+  const winner = playerWins>bankerWins?"Player Wins":(bankerWins>playerWins?"Banker Wins":"Tie");
+
+  document.getElementById("last-prediction").innerText = "Last Prediction: " + lastPrediction;
+  lastPrediction = winner;
+
+  document.getElementById("prediction").innerText = "Prediction: " + winner + " | Tie Chance: " + tieP + "%";
+
+  // Update chart
+  const ctx = document.getElementById('resultChart').getContext('2d');
+  if(window.chart) window.chart.destroy();
+  window.chart = new Chart(ctx,{
+    type: 'pie',
+    data: {
+        labels: ['Player', 'Banker', 'Tie'],
+        datasets: [{
+            data: [playerP, bankerP, tieP],
+            backgroundColor: ['#22c55e','#3b82f6','#eab308']
+        }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+}
+</script>
+</body>
+</html>
