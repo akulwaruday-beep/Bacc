@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +14,8 @@
   button:hover { background: #0056b3; }
   #back { background: #dc3545; }
   #back:hover { background: #a71d2a; }
+  #reset { background: #f97316; }
+  #reset:hover { background: #c2410c; }
   #current-cards, #prediction, #last-prediction, #note { margin-top: 15px; font-size: 16px; color: #222; }
   canvas { margin-top: 20px; }
 </style>
@@ -50,6 +53,7 @@
   <button onclick="addCard('Q')">Q</button>
   <button onclick="addCard('K')">K</button>
   <button id="back" onclick="removeCard()">⬅️ Back</button>
+  <button id="reset" onclick="resetCards()">Reset Cards</button>
 </div>
 
 <div id="current-cards">Current Cards: (none)</div>
@@ -74,6 +78,14 @@ function addCard(card) {
 function removeCard() {
   currentCards.pop();
   updateDisplay();
+}
+
+function resetCards() {
+  currentCards = [];
+  updateDisplay();
+  document.getElementById("prediction").innerText = "Prediction: (none)";
+  document.getElementById("last-prediction").innerText = "Last Prediction: (none)";
+  if(window.chart) window.chart.destroy();
 }
 
 function updateDisplay() {
@@ -173,3 +185,4 @@ function runSimulation() {
 </script>
 </body>
 </html>
+  
